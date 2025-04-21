@@ -3,7 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas import UserCreate, Token, User, RequestEmail
+from src.schemas import (
+    UserCreate,
+    Token,
+    User,
+    RequestEmail,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+)
 from src.services.auth import create_access_token, Hash, get_email_from_token
 from src.services.users import UserService
 from src.services.email import send_email
@@ -105,3 +112,42 @@ async def request_email(
             send_email, user.email, user.username, request.base_url
         )
     return {"message": "Check your email for confirmation link"}
+
+
+@router.post("/request-password-reset")
+async def request_password_reset(
+    body: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(body.email)
+
+    if user:
+        from src.services.email import send_password_reset_email
+
+        background_tasks.add_task(
+            send_password_reset_email, user.email, user.username, request.base_url
+        )
+
+    return {"message": "If the email exists, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: PasswordResetConfirm, db: AsyncSession = Depends(get_db)
+):
+    from src.services.auth import get_email_from_token, Hash
+
+    email = await get_email_from_token(body.token)
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(email)
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token or user")
+
+    hashed = Hash().get_password_hash(body.new_password)
+    await user_service.update_password(user.email, hashed)
+
+    return {"message": "Password reset successful"}

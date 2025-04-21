@@ -1,7 +1,5 @@
 from typing import Optional, Sequence
 
-from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, and_, extract, or_
@@ -37,17 +35,54 @@ def _birthday_filter_conditions(today, future_date):
 
 class ContactRepository:
     def __init__(self, db: AsyncSession):
+        """
+        Initialize the ContactRepository with a database session.
+
+        Args:
+            db (AsyncSession): Asynchronous database session for executing queries.
+        """
         self.db = db
 
     async def _execute_and_fetch(self, stmt):
+        """
+        Execute a SQLAlchemy statement and fetch all results.
+
+        Args:
+            stmt: SQLAlchemy statement to execute.
+
+        Returns:
+            List: A list of results from the query.
+        """
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
     async def _execute_and_count(self, stmt):
+        """
+        Execute a SQLAlchemy statement and return the count result.
+
+        Args:
+            stmt: SQLAlchemy statement to execute.
+
+        Returns:
+            int: The count result from the query.
+        """
         result = await self.db.execute(stmt)
         return result.scalar()
 
     async def create_contact(self, contact_data: ContactCreate, user: User) -> Contact:
+        """
+        Create a new contact for the given user.
+
+        Args:
+            contact_data (ContactCreate): Data for the new contact.
+            user (User): The user to associate the contact with.
+
+        Returns:
+            Contact: The created contact.
+
+        Raises:
+            ValueError: If a contact with the same email already exists.
+        """
         existing_contact_stmt = select(Contact).filter_by(email=contact_data.email)
         existing_contact_result = await self.db.execute(existing_contact_stmt)
         existing_contact = existing_contact_result.scalar_one_or_none()
@@ -70,6 +105,20 @@ class ContactRepository:
         email: Optional[str] = None,
         user: User = None,
     ):
+        """
+        Retrieve a paginated and optionally filtered list of contacts for a user.
+
+        Args:
+            skip (int): Number of records to skip. Defaults to 0.
+            limit (int): Maximum number of records to return. Defaults to 100.
+            first_name (Optional[str]): Filter by first name. Defaults to None.
+            last_name (Optional[str]): Filter by last name. Defaults to None.
+            email (Optional[str]): Filter by email. Defaults to None.
+            user (User): The user whose contacts are being retrieved.
+
+        Returns:
+            dict: A dictionary containing total count, skip, limit, and the list of contacts.
+        """
         stmt = select(Contact).filter_by(user=user)
 
         filters = []
@@ -102,6 +151,16 @@ class ContactRepository:
         }
 
     async def get_contact_by_id(self, contact_id: int, user: User) -> Optional[Contact]:
+        """
+        Retrieve a contact by its ID for a specific user.
+
+        Args:
+            contact_id (int): ID of the contact to retrieve.
+            user (User): The user who owns the contact.
+
+        Returns:
+            Optional[Contact]: The contact if found, otherwise None.
+        """
         stmt = select(Contact).filter_by(id=contact_id, user=user)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -109,6 +168,17 @@ class ContactRepository:
     async def update_contact(
         self, contact_id: int, contact_data: ContactUpdate, user: User
     ) -> Optional[Contact]:
+        """
+        Update an existing contact for a user.
+
+        Args:
+            contact_id (int): ID of the contact to update.
+            contact_data (ContactUpdate): Data to update the contact with.
+            user (User): The user who owns the contact.
+
+        Returns:
+            Optional[Contact]: The updated contact if found, otherwise None.
+        """
         contact = await self.get_contact_by_id(contact_id, user)
         if contact is None:
             return None
@@ -121,6 +191,16 @@ class ContactRepository:
         return contact
 
     async def delete_contact(self, contact_id: int, user: User) -> Optional[Contact]:
+        """
+        Delete a contact by its ID for a specific user.
+
+        Args:
+            contact_id (int): ID of the contact to delete.
+            user (User): The user who owns the contact.
+
+        Returns:
+            Optional[Contact]: The deleted contact if found, otherwise None.
+        """
         contact = await self.get_contact_by_id(contact_id, user)
         if contact is None:
             return None
@@ -130,6 +210,16 @@ class ContactRepository:
         return contact
 
     async def search_contacts(self, query: str, user: User) -> Sequence[Contact]:
+        """
+        Search for contacts by a query string for a specific user.
+
+        Args:
+            query (str): The search query string (matches first name, last name, or email).
+            user (User): The user whose contacts are being searched.
+
+        Returns:
+            Sequence[Contact]: A list of contacts matching the query.
+        """
         stmt = select(Contact).filter(
             and_(
                 Contact.user == user,
@@ -146,6 +236,18 @@ class ContactRepository:
     async def get_upcoming_birthdays(
         self, days: int, skip: int, limit: int, user: User
     ):
+        """
+        Retrieve contacts with upcoming birthdays within a specified number of days.
+
+        Args:
+            days (int): Number of days to look ahead for birthdays.
+            skip (int): Number of records to skip.
+            limit (int): Maximum number of records to return.
+            user (User): The user whose contacts are being retrieved.
+
+        Returns:
+            dict: A dictionary containing total count, skip, limit, and the list of contacts with upcoming birthdays.
+        """
         today = date.today()
         future_date = today + timedelta(days=days)
         conditions = _birthday_filter_conditions(today, future_date)
