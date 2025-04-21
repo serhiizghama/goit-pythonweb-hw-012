@@ -30,9 +30,8 @@ class UserService:
         try:
             g = Gravatar(body.email)
             avatar = g.get_image()
-        except Exception as e:
-            print(e)
-
+        except Exception:
+            pass
         return await self.repository.create_user(body, avatar)
 
     async def get_user_by_id(self, user_id: int):

@@ -6,13 +6,17 @@ services:
     container_name: contacts-redis
     ports:
       - "6379:6379"
+    env_file:
+      - .env
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
 
   db:
     image: postgres
     container_name: contacts-db
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

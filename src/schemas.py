@@ -1,7 +1,13 @@
 from datetime import date
 from typing import Optional, List
+from enum import Enum
 
 from pydantic import BaseModel, EmailStr, ConfigDict
+
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 class ContactBase(BaseModel):
@@ -37,6 +43,7 @@ class User(BaseModel):
     username: str
     email: str
     avatar: str
+    role: UserRole
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,6 +52,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    role: Optional[UserRole] = UserRole.USER
 
 
 class Token(BaseModel):

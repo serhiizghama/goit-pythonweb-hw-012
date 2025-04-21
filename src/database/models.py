@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, func
+from sqlalchemy import Column, Integer, String, ForeignKey, func, Enum
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql.sqltypes import Date, DateTime, Boolean
+import enum
 
 
 class Base(DeclarativeBase):
@@ -23,6 +24,11 @@ class Contact(Base):
     user = relationship("User", backref="contacts")
 
 
+class UserRole(enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -33,3 +39,4 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     avatar = Column(String(255), nullable=True)
     confirmed = Column(Boolean, default=False)
+    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)

@@ -11,6 +11,7 @@ import redis.asyncio as redis
 
 from src.database.db import get_db
 from src.conf.config import config as app_config
+from src.database.models import User, UserRole
 from src.services.users import UserService
 
 
@@ -77,7 +78,7 @@ async def get_current_user(
         "id": user.id,
         "username": user.username,
         "email": user.email,
-        "avatar": user.avatar
+        "avatar": user.avatar,
     }
     await redis_client.set(f"user:{username}", json.dumps(user_dict), ex=3600)
 
@@ -106,3 +107,12 @@ async def get_email_from_token(token: str):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid token",
         )
+
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admins only.",
+        )
+    return current_user

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -6,6 +8,8 @@ from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse
 
 from src.api import contacts, users, auth
+from src.database.db import sessionmanager
+from src.database.models import Base
 from src.exceptions import (
     validation_exception_handler,
     integrity_exception_handler,
@@ -17,7 +21,15 @@ from sqlalchemy.exc import IntegrityError
 from src.conf.config import config as app_config
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await sessionmanager.init()
+    async with sessionmanager._engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 limiter = Limiter(key_func=get_remote_address)
 

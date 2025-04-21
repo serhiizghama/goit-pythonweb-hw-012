@@ -13,7 +13,29 @@ else:
 
 
 class Config(BaseSettings):
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB")
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    5433
+    REDIS_USER: str = os.getenv("REDIS_USER", "default")
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: str = os.getenv("REDIS_PORT", "6379")
+
+    @property
+    def REDIS_URL(self) -> str:
+        return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
+
     JWT_SECRET: str = os.getenv("JWT_SECRET")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
     JWT_EXPIRATION_TIME: int = os.getenv("JWT_EXPIRATION_TIME")
@@ -33,8 +55,6 @@ class Config(BaseSettings):
     CLOUDINARY_NAME: str = os.getenv("CLOUDINARY_NAME")
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY")
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET")
-
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     model_config = ConfigDict(extra="ignore")
 
